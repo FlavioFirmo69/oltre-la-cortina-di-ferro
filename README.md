@@ -2,6 +2,14 @@
 
 App per le conferme al torneo dedicato alle squadre dell'Est Europa anni Ottanta. Grafica da manifesto sportivo: carta, rosso mattone, verde scuro, illustrazione SVG originale.
 
+Sito pubblico: https://oltre-la-cortina-di-ferro.vercel.app/
+
+## Omini e divise
+
+Scrivendo una squadra durante l'assegnazione appare un omino Subbuteo SVG, aggiornato in tempo reale. Il catalogo iniziale in Supabase contiene Spartak Mosca 1987/88 e Dynamo Dresda 1988/89, riconosciute anche tramite alias (ad esempio Dinamo Dresda). Le fonti delle maglie sono collegate nell'editor. Si tratta di ricostruzioni stilizzate: pantaloncini, calzettoni e dettagli possono essere corretti dall'utente.
+
+Per le altre squadre l'editor propone esplicitamente una divisa personalizzata, senza fingere di aver trovato una maglia storica. Colori di maglia, dettagli, pantaloncini e calzettoni sono modificabili; motivi disponibili: tinta unita, strisce verticali/orizzontali, fascia sul petto o diagonale. Stagione e variante casa/trasferta/coppa si salvano con la conferma. Non viene fatta una ricerca web automatica a ogni digitazione: il riconoscimento usa il catalogo documentato, espandibile tramite migrazioni. Il catalogo è pubblico in lettura e protetto dalle modifiche anonime; le divise personalizzate dei giocatori seguono il modello pubblico delle conferme.
+
 ## Funzionamento
 
 I 12 candidati, nell'ordine del ranking: Flavio, Rudy, Andrea, Bono, Grifo, Flanik, Begnozzi, Salvi, Carmelo, Omar, Leo, Giulio. Assegnare una squadra conferma un giocatore; si possono modificare le squadre, lasciare una conferma aperta o segnare una rinuncia. Giulio parte come indeciso. Squadre a nome libero, uniche fra i giocatori.
@@ -54,7 +62,7 @@ Importare il repository in Vercel:
 - Output directory: `dist`.
 - Environment variables: `VITE_SUPABASE_URL` e `VITE_SUPABASE_PUBLISHABLE_KEY`, copiati dal file locale.
 
-Rieseguire il deploy dopo modifiche delle variabili. Le migrazioni si applicano con `npm run db:migrate` dal contesto di rilascio con accesso al database; il build frontend non contiene credenziali PostgreSQL e non applica migrazioni. Nessun repository remoto o deployment Vercel è stato ancora creato da questa app.
+Rieseguire il deploy dopo modifiche delle variabili. Le migrazioni si applicano con `npm run db:migrate` dal contesto di rilascio con accesso al database; il build frontend non contiene credenziali PostgreSQL e non applica migrazioni. Il repository `FlavioFirmo69/oltre-la-cortina-di-ferro` è collegato a Vercel; il branch di produzione è `mslearn-tailspin-spacegame-web`, nome ereditato dall'impostazione iniziale dell'account GitHub.
 
 ## Verifiche e passo successivo
 

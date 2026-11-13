@@ -1,0 +1,24 @@
+export const KIT_CATALOG = [
+  {id:'spartak-moscow-1987-home',team_name:'Spartak Mosca',aliases:['Spartak Moscow','Spartak Moskva','FC Spartak Moscow'],season:'1987-1988',variant:'casa',shirt:'#bd302e',accent:'#f4ecd8',shorts:'#f4ecd8',socks:'#bd302e',pattern:'band',source_url:'https://www.footballkitarchive.com/spartak-moscow-1987-88-home-kit-66005/',source_note:'Maglia rossa con fascia bianca documentata in archivio. Pantaloncini, calzettoni e dettagli sono una ricostruzione stilizzata modificabile.'},
+  {id:'dynamo-dresden-1988-home',team_name:'Dynamo Dresda',aliases:['Dynamo Dresden','SG Dynamo Dresden','Dinamo Dresda','Dinamo Dresden'],season:'1988-1989',variant:'casa',shirt:'#e6bd39',accent:'#252c29',shorts:'#252c29',socks:'#e6bd39',pattern:'plain',source_url:'https://www.footballkitarchive.com/sg-dynamo-dresden-1988-89-home-kit-92182/',source_note:'Maglia giallo oro con colletto e bordi neri documentata in archivio. Pantaloncini, calzettoni e dettagli sono una ricostruzione stilizzata modificabile.'}
+];
+export const PATTERNS = {plain:'Tinta unita',vertical:'Strisce verticali',hoops:'Strisce orizzontali',band:'Fascia sul petto',sash:'Fascia diagonale'};
+export const DEFAULT_KIT = {catalog_id:null,season:'1985-1986',variant:'casa',shirt:'#e7dfca',accent:'#434d43',shorts:'#434d43',socks:'#e7dfca',pattern:'plain'};
+export function normalizeTeam(value){return String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim().replace(/^(fc|fk|sg)\s+/,'');}
+export function findTeamKits(value,catalog=KIT_CATALOG){const query=normalizeTeam(value);return query?catalog.filter(k=>[k.team_name,...k.aliases].some(n=>normalizeTeam(n)===query)):[];}
+export function fromCatalog(record){return cleanKit({...record,catalog_id:record.id});}
+export function cleanKit(input={}){
+ const result={...DEFAULT_KIT};
+ for(const key of ['shirt','accent','shorts','socks'])if(/^#[0-9a-f]{6}$/i.test(input?.[key]||''))result[key]=input[key].toLowerCase();
+ if(Object.hasOwn(PATTERNS,input?.pattern))result.pattern=input.pattern;
+ if(/^198\d-(198\d|1990)$/.test(input?.season||'')&&Number(input.season.slice(5))===Number(input.season.slice(0,4))+1)result.season=input.season;
+ if(['casa','trasferta','coppa'].includes(input?.variant))result.variant=input.variant;
+ if(typeof input?.catalog_id==='string'&&/^[a-z0-9-]{1,80}$/.test(input.catalog_id))result.catalog_id=input.catalog_id;
+ return result;
+}
+export function kitFigure(input,identifier='preview'){
+ const k=cleanKit(input),uid=`shirt-${String(identifier).replace(/[^a-z0-9-]/gi,'')}`;
+ const body='M63 66L48 70 28 101 43 111 58 93 57 143 117 143 118 93 132 111 147 101 127 70 111 66 100 73 76 73Z';
+ const pattern=k.pattern==='vertical'?[65,82,99].map(x=>`<path d="M${x} 65v82" stroke="${k.accent}" stroke-width="9"/>`).join(''):k.pattern==='hoops'?[86,103,120,137].map(y=>`<path d="M25 ${y}h130" stroke="${k.accent}" stroke-width="8"/>`).join(''):k.pattern==='band'?`<path d="M27 103h122" stroke="${k.accent}" stroke-width="15"/>`:k.pattern==='sash'?`<path d="M53 65l71 83" stroke="${k.accent}" stroke-width="16"/>`:'';
+ return `<svg class="kit-figure" viewBox="0 0 180 270" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Omino Subbuteo con divisa stilizzata"><defs><clipPath id="${uid}"><path d="${body}"/></clipPath></defs><ellipse cx="90" cy="253" rx="66" ry="13" fill="#172b25" opacity=".17"/><path d="M25 237v8c0 18 130 18 130 0v-8" fill="#203c30" stroke="#26332d" stroke-width="2"/><ellipse cx="90" cy="237" rx="65" ry="15" fill="#49674b" stroke="#26332d" stroke-width="2"/><ellipse cx="90" cy="236" rx="53" ry="9" fill="none" stroke="#c7c49a" stroke-width="1.5"/><g stroke="#343b30" stroke-width="2" stroke-linejoin="round"><path d="M67 164l-4 38 8 26h13l-8-29 10-29m12-6 4 34-12 27 12 4 15-28-3-36" fill="#cdad83"/><path d="M66 194l-3 8 8 26h13l-8-29m26-6 0 5-12 27 12 4 15-28-2-7" fill="${k.socks}"/><path d="M70 221l-8 10c-4 5 0 7 5 7h20l-3-14m8-4-9 8c-3 5 0 9 6 9h21l-7-11" fill="#292e29"/><path d="M58 139l-2 32 29 5 5-20 4 19 27-4-5-32Z" fill="${k.shorts}"/><path d="M36 105l-6 15c-2 7 4 11 9 7l10-16m84-6 6 15c2 7-4 11-9 7l-10-16" fill="#cdad83"/><path d="${body}" fill="${k.shirt}"/><g clip-path="url(#${uid})" stroke="none">${pattern}</g><path d="M63 66l14 15 11-8 11 8 12-15M30 100l15 10m86 0 15-10" fill="none" stroke="${k.accent}" stroke-width="5"/><path d="M78 56v14l10 5 11-5V55" fill="#cdad83"/><ellipse cx="88" cy="42" rx="18" ry="23" fill="#cdad83"/><path d="M70 40c-3-24 35-35 37-4l-8-6-8-6-11 10Z" fill="#3f342a"/><path d="M58 139h58" fill="none"/></g><path d="M68 87l-3 43m41-45 5 46" stroke="#fff" stroke-width="3" opacity=".13"/></svg>`;
+}

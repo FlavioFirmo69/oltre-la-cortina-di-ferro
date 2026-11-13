@@ -2,6 +2,7 @@ import pg from 'pg';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {randomUUID} from 'node:crypto';
+import {KIT_CATALOG,fromCatalog} from '../src/kits.js';
 const target=new URL(process.env.DATABASE_URL);target.searchParams.delete('sslmode');
 const ca=await readFile(new URL('../supabase/ca.crt',import.meta.url),'utf8');
 const client=new pg.Client({connectionString:target.toString(),ssl:{rejectUnauthorized:true,ca},connectionTimeoutMillis:15000,statement_timeout:15000});
@@ -13,6 +14,9 @@ try{
  const original=roster.rows[0],second=roster.rows[1],testTeam=`SCB test ${randomUUID()}`;
  await client.query('set local role anon');
  assert.equal((await client.query('select id,name,ranking,status,team,version from public.candidates')).rowCount,12);
+ assert.equal((await client.query('select * from public.kit_catalog')).rowCount,2);
+ await rejectedCatalogWrite();
+ async function rejectedCatalogWrite(){await client.query('savepoint catalog_write');await assert.rejects(client.query("update public.kit_catalog set shirt='#000000'"),e=>e.code==='42501');await client.query('rollback to savepoint catalog_write');}
  async function rejected(sql,params,code){
    await client.query('savepoint rejected');
    await assert.rejects(client.query(sql,params),e=>e.code===code);
@@ -29,9 +33,14 @@ try{
  await rejected('select public.save_registration($1,$2,$3,$4)',['p2',second.version,'   ','confirmed'],'P0001');
  await client.query('select public.save_registration($1,$2,$3,$4)',['p1',original.version+1,null,'pending']);
  const reset=(await client.query("select status,team from public.candidates where id='p1'")).rows[0];assert.equal(reset.status,'pending');assert.equal(reset.team,null);
+ const kit=fromCatalog(KIT_CATALOG[0]);
+ await client.query('select public.save_registration($1,$2,$3,$4,$5)',['p1',original.version+2,testTeam,'confirmed',kit]);
+ assert.deepEqual((await client.query("select kit from public.candidates where id='p1'")).rows[0].kit,kit);
+ await rejected('select public.save_registration($1,$2,$3,$4,$5)',['p2',second.version,'Other team','confirmed',{...kit,shirt:'red<script>'}],'P0001');
+ await rejected('select public.save_registration($1,$2,$3,$4,$5)',['p2',second.version,'Other team','confirmed',{...kit,season:'1987-1989'}],'P0001');
  await client.query('reset role');
- assert.equal((await client.query('select count(*)::int as n from public.registration_events where candidate_id=$1 and after_value->>\'team\'=$2',['p1',testTeam])).rows[0].n,1);
+ assert.equal((await client.query('select count(*)::int as n from public.registration_events where candidate_id=$1 and after_value->>\'team\'=$2',['p1',testTeam])).rows[0].n,2);
  await client.query('rollback');
- console.log(JSON.stringify({verified:true,candidates:12,publicRead:true,publicConfirm:true,publicRevoke:true,rankingProtected:true,privateColumnsProtected:true,auditProtected:true,membersProtected:true,staleRejected:true,duplicateRejected:true,emptyTeamRejected:true,testChangesRolledBack:true}));
+ console.log(JSON.stringify({verified:true,candidates:12,publicRead:true,publicConfirm:true,publicRevoke:true,rankingProtected:true,privateColumnsProtected:true,auditProtected:true,membersProtected:true,staleRejected:true,duplicateRejected:true,emptyTeamRejected:true,catalogReadOnly:true,kitSaved:true,invalidKitRejected:true,testChangesRolledBack:true}));
 }catch(error){await client.query('rollback').catch(()=>{});console.error(JSON.stringify({verified:false,code:error.code||error.name,message:error instanceof assert.AssertionError?'Assertion failed':error.message}));process.exitCode=1;}
 finally{await client.end().catch(()=>{});}

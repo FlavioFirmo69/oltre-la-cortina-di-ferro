@@ -1,9 +1,11 @@
 import {createClient} from '@supabase/supabase-js';
 import {initialCandidates,allocation,validateTeam} from './registration.js';
+import {KIT_CATALOG,DEFAULT_KIT,findTeamKits,fromCatalog,kitFigure} from './kits.js';
+import {mountKitEditor} from './kit-editor.js';
 import './style.css';
 const url=import.meta.env.VITE_SUPABASE_URL,key=import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 const db=url&&key?createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}}):null,root=document.querySelector('#app');
-let demo=!db,candidates=[],filter='all',busy=false;
+let demo=!db,candidates=[],catalog=KIT_CATALOG,filter='all',busy=false;
 const storageKey='circolo-registrazioni-v1';
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const statusText={pending:'Da confermare',confirmed:'Confermato',declined:'Non partecipa'};
@@ -15,7 +17,9 @@ function loadDemo(){
   try{const saved=JSON.parse(localStorage.getItem(storageKey));candidates=Array.isArray(saved)&&saved.length===12?saved:initialCandidates();}catch{candidates=initialCandidates();}
 }
 async function loadRemote(){
-  const {data,error}=await db.from('candidates').select('id,name,ranking,team,status,undecided,version').order('ranking');if(error)throw error;
+  const [people,kits]=await Promise.all([db.from('candidates').select('id,name,ranking,team,status,undecided,version,kit').order('ranking'),db.from('kit_catalog').select('*').order('team_name')]);
+  if(people.error)throw people.error;if(kits.error)throw kits.error;
+  const data=people.data;catalog=kits.data;
   if(data.length!==12)throw new Error('Elenco del torneo incompleto. Contatta l’organizzatore.');
   candidates=data;
 }
@@ -26,7 +30,7 @@ function render(){
   <div class="phase"><span class="phase-step current">01 <strong>Conferme e squadre</strong></span><span class="phase-line"></span><span class="phase-step">02 Composizione serie</span><span class="phase-line"></span><span class="phase-step">03 Campionato</span></div>
   <section class="stats registration-stats"><article><small>GIOCATORI NEL RANKING</small><strong>12<span>candidati</span></strong></article><article><small>CONFERMATI</small><strong>${a.confirmed.length}<span>con una squadra</span></strong><div class="progress"><i style="width:${a.confirmed.length/12*100}%"></i></div></article><article><small>CONFERME APERTE</small><strong>${a.pending}<span>in attesa</span></strong></article><article><small>COMPOSIZIONE</small><strong>${a.size===null?'—':`${a.size} + 6`}<span>${a.ready?'pronta da validare':a.size?'provvisoria':'da definire'}</span></strong></article></section>
   <section class="board"><div class="board-head"><nav aria-label="Filtra partecipanti">${[['all','Tutti'],['confirmed','Confermati'],['pending','In attesa'],['declined','Assenti']].map(([v,t])=>`<button data-filter="${v}" class="${filter===v?'selected':''}" aria-pressed="${filter===v}">${t}</button>`).join('')}</nav><button id="refresh" class="quiet">↻ Aggiorna</button></div>
-  <div class="table-scroll"><table class="registration-table"><thead><tr><th>RANK</th><th>Giocatore</th><th>Squadra</th><th>Stato</th><th>Serie*</th><th><span class="sr-only">Azioni</span></th></tr></thead><tbody>${shown.map(c=>`<tr><td><span class="rank">${String(c.ranking).padStart(2,'0')}</span></td><th><span class="avatar">${esc(c.name.slice(0,2).toUpperCase())}</span>${esc(c.name)}</th><td class="team-cell">${c.team?`<span class="team-mark">◈</span> ${esc(c.team)}`:'<span class="unassigned">Squadra da assegnare</span>'}</td><td><span class="badge ${c.status}">${statusText[c.status]}</span></td><td><span class="division-badge">${a.divisions.get(c.id)||'—'}</span></td><td><button class="${c.status==='confirmed'?'quiet':'assign-button'}" data-edit="${esc(c.id)}">${c.status==='confirmed'?'Modifica':'Assegna squadra'} <span aria-hidden="true">↗</span></button></td></tr>`).join('')||'<tr><td colspan="6" class="empty">Nessun giocatore in questa categoria.</td></tr>'}</tbody></table></div>
+  <div class="table-scroll"><table class="registration-table"><thead><tr><th>RANK</th><th>Giocatore</th><th>Squadra</th><th>Stato</th><th>Serie*</th><th><span class="sr-only">Azioni</span></th></tr></thead><tbody>${shown.map(c=>`<tr><td><span class="rank">${String(c.ranking).padStart(2,'0')}</span></td><th><span class="avatar">${esc(c.name.slice(0,2).toUpperCase())}</span>${esc(c.name)}</th><td class="team-cell">${c.team?teamIdentity(c):'<span class="unassigned">Squadra da assegnare</span>'}</td><td><span class="badge ${c.status}">${statusText[c.status]}</span></td><td><span class="division-badge">${a.divisions.get(c.id)||'—'}</span></td><td><button class="${c.status==='confirmed'?'quiet':'assign-button'}" data-edit="${esc(c.id)}">${c.status==='confirmed'?'Modifica':'Assegna squadra'} <span aria-hidden="true">↗</span></button></td></tr>`).join('')||'<tr><td colspan="6" class="empty">Nessun giocatore in questa categoria.</td></tr>'}</tbody></table></div>
   <div class="table-foot">* Le serie dipendono dal numero finale dei partecipanti e seguono il ranking.</div></section>
   <section class="registration-bottom"><article class="format-card"><p class="eyebrow">DUE POSSIBILITÀ, UNA REGOLA</p><h2>Il ranking decide la serie.</h2><div class="format-options"><div><strong>11 giocatori</strong><p>Primi 5 partecipanti in <b>Serie A</b><br>Altri 6 in <b>Serie B</b></p><span>100 partite · 10 giornate per serie</span></div><div><strong>12 giocatori</strong><p>Primi 6 partecipanti in <b>Serie A</b><br>Altri 6 in <b>Serie B</b></p><span>120 partite · 10 giornate per serie</span></div></div></article><article class="readiness"><p class="eyebrow">IL PUNTO SULLE CONFERME</p><h2>${a.ready?'La rosa è completa.':a.pending?'Aspettiamo le ultime squadre.':'Numero partecipanti da rivedere.'}</h2><p>${a.ready?`Tutte le risposte sono registrate. Il ranking forma una Serie A da ${a.size} e una Serie B da 6.`:a.size?`Con ${a.confirmed.length} confermati, la proiezione è ${a.size}+6. Restano ${a.pending} risposte aperte: la composizione può cambiare.`:a.pending?`${a.confirmed.length} confermati su 12 candidati. La composizione apparirà al raggiungimento di 11 o 12 conferme.`:'Il formato previsto richiede 11 o 12 partecipanti confermati.'}</p>${a.size?`<div class="series-preview"><p><b>A</b> ${a.confirmed.filter(c=>a.divisions.get(c.id)==='A').map(c=>esc(c.name)).join(' · ')}</p><p><b>B</b> ${a.confirmed.filter(c=>a.divisions.get(c.id)==='B').map(c=>esc(c.name)).join(' · ')}</p></div>`:''}<p class="muted">Il calendario sarà il passo successivo, dopo la validazione delle conferme.</p></article></section>
   <aside class="rules"><strong>Quando si giocherà</strong><p>Andata e ritorno · Vittoria 3 punti · Pareggio 1 · Due retrocessioni dalla A e due promozioni dalla B. Per ora raccogliamo soltanto le conferme.</p></aside><div class="bottom-actions"><button id="export" class="quiet">↓ Esporta partecipanti CSV</button>${demo?'<span class="muted">Demo salvata solo in questo browser.</span><button id="reset" class="text-button">Azzera demo</button>':'<span class="muted">Accesso senza login · Chi ha il link può aggiornare le conferme.</span>'}</div>`);
@@ -41,17 +45,25 @@ function render(){
   };
 }
 function persist(){if(demo)localStorage.setItem(storageKey,JSON.stringify(candidates));}
+function teamIdentity(candidate){
+  const fallback=findTeamKits(candidate.team,catalog)[0];
+  const kit=candidate.kit||(fallback?fromCatalog(fallback):DEFAULT_KIT);
+  return `<div class="team-identity">${kitFigure(kit,`row-${candidate.id}`)}<span>${esc(candidate.team)}<small>${candidate.kit||fallback?esc(kit.season.replace('-','/')):'Divisa da personalizzare'}</small></span></div>`;
+}
 function editCandidate(id){
   const c=candidates.find(c=>c.id===id),dialog=document.createElement('dialog');
   dialog.innerHTML=`<form id="candidate"><p class="eyebrow">RANKING #${c.ranking} · CONFERMA PARTECIPAZIONE</p><h2>${esc(c.name)} scende in campo.</h2><p class="modal-intro">Scegli una squadra dell’Est Europa degli anni ’80 per confermare la partecipazione. La serie verrà determinata dal ranking.</p><label>Nome della squadra<input name="team" maxlength="60" placeholder="La tua squadra dell’Est" autocomplete="off" required value="${esc(c.team||'')}"></label><p class="muted">Nome libero. Ogni squadra può essere assegnata a un solo giocatore.</p><p id="dialog-error" role="alert"></p><div class="dialog-actions"><button id="cancel" type="button" class="quiet">Annulla</button><button class="primary" type="submit">Assegna e conferma →</button></div><div class="other-status"><button id="pending" type="button" class="text-button">Lascia da confermare</button><button id="declined" type="button" class="text-button danger">Non partecipa</button></div></form>`;
   document.body.append(dialog);dialog.showModal();dialog.onclose=()=>dialog.remove();dialog.querySelector('#cancel').onclick=()=>dialog.close();
+  const kitSection=document.createElement('section');kitSection.id='kit-editor';dialog.querySelector('#dialog-error').before(kitSection);
+  const editor=mountKitEditor(dialog.querySelector('form'),catalog,c);
   dialog.addEventListener('cancel',e=>{if(busy)e.preventDefault();});
   const save=async(status,team)=>{
     if(busy)return;busy=true;dialog.querySelectorAll('button').forEach(b=>b.disabled=true);
     try{
       if(status==='confirmed')team=validateTeam(team,candidates,id);else team=null;
-      if(demo){Object.assign(c,{status,team,version:c.version+1,undecided:c.name==='Giulio'&&status==='pending'});persist();}
-      else{const {error}=await db.rpc('save_registration',{candidate_id:id,expected_version:c.version,new_team:team,new_status:status});if(error)throw error;await loadRemote();}
+      const kit=status==='confirmed'?editor.getKit():null;
+      if(demo){Object.assign(c,{status,team,kit,version:c.version+1,undecided:c.name==='Giulio'&&status==='pending'});persist();}
+      else{const {error}=await db.rpc('save_registration',{candidate_id:id,expected_version:c.version,new_team:team,new_status:status,new_kit:kit});if(error)throw error;await loadRemote();}
       dialog.close();render();notice(status==='confirmed'?`${c.name} confermato con ${team}.`:`Stato di ${c.name} aggiornato.`);
     }catch(err){dialog.querySelector('#dialog-error').textContent=err.message;dialog.querySelectorAll('button').forEach(b=>b.disabled=false);}finally{busy=false;}
   };
