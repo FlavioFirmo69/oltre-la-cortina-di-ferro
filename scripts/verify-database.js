@@ -28,7 +28,7 @@ try{
  await rejected('select * from public.members',[],'42501');
  await client.query('select public.save_registration($1,$2,$3,$4)',['p1',original.version,testTeam,'confirmed']);
  assert.equal((await client.query("select status from public.candidates where id='p1'")).rows[0].status,'confirmed');
- await rejected('select public.save_registration($1,$2,$3,$4)',['p1',original.version,testTeam,'confirmed'],'40001');
+ await rejected('select public.save_registration($1,$2,$3,$4)',['p1',original.version,testTeam,'confirmed'],'P0001');
  await rejected('select public.save_registration($1,$2,$3,$4)',['p2',second.version,testTeam,'confirmed'],'23505');
  await rejected('select public.save_registration($1,$2,$3,$4)',['p2',second.version,'   ','confirmed'],'P0001');
  await client.query('select public.save_registration($1,$2,$3,$4)',['p1',original.version+1,null,'pending']);
