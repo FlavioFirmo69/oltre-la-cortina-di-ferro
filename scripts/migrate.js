@@ -36,10 +36,18 @@ try {
     const directory=fileURLToPath(new URL('../supabase/migrations/',import.meta.url));
     const applied=[];
     for(const name of (await readdir(directory)).filter(n=>/^\d+.*\.sql$/.test(n)).sort()){
-      const sql=await readFile(`${directory}/${name}`,'utf8');
+      const rawSql=await readFile(`${directory}/${name}`,'utf8');
+      const sql=rawSql.replace(/^\uFEFF/,'').replace(/\r\n/g,'\n');
       const checksum=createHash('sha256').update(sql).digest('hex');
       const found=await client.query('select checksum from public.scb_schema_migrations where version=$1',[name]);
-      if(found.rowCount){if(found.rows[0].checksum!==checksum)throw new Error(`Migrazione già applicata ma modificata: ${name}`);continue;}
+      if(found.rowCount){
+        if(found.rows[0].checksum!==checksum){
+          const legacyChecksum=createHash('sha256').update(rawSql).digest('hex');
+          if(found.rows[0].checksum!==legacyChecksum)throw new Error(`Migrazione già applicata ma modificata: ${name}`);
+          await client.query('update public.scb_schema_migrations set checksum=$1 where version=$2',[checksum,name]);
+        }
+        continue;
+      }
       await client.query(sql);
       await client.query('insert into public.scb_schema_migrations(version,checksum) values($1,$2)',[name,checksum]);
       applied.push(name);
