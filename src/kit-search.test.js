@@ -1,0 +1,5 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';import {extractKit,GET,matchesSeasonTitle} from '../api/kit-search.js';
+test('La ricerca non attribuisce una stagione vicina a quella richiesta',()=>{assert.equal(matchesSeasonTitle('Steaua 1986-1987','1985-1986'),false);assert.equal(matchesSeasonTitle('Steaua 1985–86 season','1985-1986'),true);assert.equal(matchesSeasonTitle('Dynamo Kyiv 1986','1985-1986'),true);});
+test('Estrazione colori da divisa di una pagina stagionale',()=>{const kit=extractKit('|body1=CC0000\n|shorts1=FFFFFF\n|socks1=CC0000\n|pattern_b1=_whitehorizontal','1986-1987','casa');assert.equal(kit.shirt,'#cc0000');assert.equal(kit.pattern,'hoops');assert.equal(kit.accent,'#f4f1e7');});
+test('Non spaccia un template opaco bianco per una divisa trovata',()=>{assert.equal(extractKit('|body1=FFFFFF\n|shorts1=FFFFFF\n|socks1=FFFFFF\n|pattern_b1=_someclub2526h','1985-1986','casa'),null);});
+test('Rifiuta parametri non validi prima di accedere a fonti esterne',async()=>{assert.equal((await GET(new Request('https://example.com/api/kit-search?team=A&season=2026-2027'))).status,400);});

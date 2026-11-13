@@ -1,6 +1,6 @@
 import {createClient} from '@supabase/supabase-js';
 import {initialCandidates,allocation,validateTeam} from './registration.js';
-import {KIT_CATALOG,DEFAULT_KIT,findTeamKits,fromCatalog,kitFigure} from './kits.js';
+import {KIT_CATALOG,DEFAULT_KIT,findTeamKits,fromCatalog,kitFigure,resolveKit} from './kits.js';
 import {mountKitEditor} from './kit-editor.js';
 import './style.css';
 const url=import.meta.env.VITE_SUPABASE_URL,key=import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -47,8 +47,8 @@ function render(){
 function persist(){if(demo)localStorage.setItem(storageKey,JSON.stringify(candidates));}
 function teamIdentity(candidate){
   const fallback=findTeamKits(candidate.team,catalog)[0];
-  const kit=candidate.kit||(fallback?fromCatalog(fallback):DEFAULT_KIT);
-  return `<div class="team-identity">${kitFigure(kit,`row-${candidate.id}`)}<span>${esc(candidate.team)}<small>${candidate.kit||fallback?esc(kit.season.replace('-','/')):'Divisa da personalizzare'}</small></span></div>`;
+  const kit=resolveKit(candidate,catalog);
+  return `<div class="team-identity">${kit?kitFigure(kit,`row-${candidate.id}`):'<span class="kit-mini-unresolved">?</span>'}<span>${esc(candidate.team)}<small>${kit?esc(kit.season.replace('-','/')):'Divisa da cercare'}</small></span></div>`;
 }
 function editCandidate(id){
   const c=candidates.find(c=>c.id===id),dialog=document.createElement('dialog');
@@ -62,6 +62,7 @@ function editCandidate(id){
     try{
       if(status==='confirmed')team=validateTeam(team,candidates,id);else team=null;
       const kit=status==='confirmed'?editor.getKit():null;
+      if(status==='confirmed'&&!kit)throw new Error('Attendi la ricerca della divisa oppure scegli Personalizza.');
       if(demo){Object.assign(c,{status,team,kit,version:c.version+1,undecided:c.name==='Giulio'&&status==='pending'});persist();}
       else{const {error}=await db.rpc('save_registration',{candidate_id:id,expected_version:c.version,new_team:team,new_status:status,new_kit:kit});if(error)throw error;await loadRemote();}
       dialog.close();render();notice(status==='confirmed'?`${c.name} confermato con ${team}.`:`Stato di ${c.name} aggiornato.`);

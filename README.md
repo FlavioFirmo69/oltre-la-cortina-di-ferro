@@ -8,7 +8,11 @@ Sito pubblico: https://oltre-la-cortina-di-ferro.vercel.app/
 
 Scrivendo una squadra durante l'assegnazione appare un omino Subbuteo SVG, aggiornato in tempo reale. Il catalogo iniziale in Supabase contiene Spartak Mosca 1987/88 e Dynamo Dresda 1988/89, riconosciute anche tramite alias (ad esempio Dinamo Dresda). Le fonti delle maglie sono collegate nell'editor. Si tratta di ricostruzioni stilizzate: pantaloncini, calzettoni e dettagli possono essere corretti dall'utente.
 
-Per le altre squadre l'editor propone esplicitamente una divisa personalizzata, senza fingere di aver trovato una maglia storica. Colori di maglia, dettagli, pantaloncini e calzettoni sono modificabili; motivi disponibili: tinta unita, strisce verticali/orizzontali, fascia sul petto o diagonale. Stagione e variante casa/trasferta/coppa si salvano con la conferma. Non viene fatta una ricerca web automatica a ogni digitazione: il riconoscimento usa il catalogo documentato, espandibile tramite migrazioni. Il catalogo è pubblico in lettura e protetto dalle modifiche anonime; le divise personalizzate dei giocatori seguono il modello pubblico delle conferme.
+Il catalogo documentato comprende anche Ferencváros 1986/87, Dinamo Kiev 1985/86 e Hansa Rostock 1989/90. Le vecchie divise neutre di queste squadre sono state aggiornate nel database, mantenendo nomi e conferme.
+
+Per le altre squadre l'editor avvia una ricerca online dopo una breve pausa nella digitazione, tramite la funzione Vercel `api/kit-search.js`. Cerca pagine stagionali su Wikipedia in italiano e inglese, ricava i colori leggibili e collega la fonte. Non usa maglie attuali come se fossero anni Ottanta e non garantisce di trovare tutte le squadre o riprodurre motivi complessi: se i dati non sono utilizzabili, mostra la mancata corrispondenza e richiede una personalizzazione. Il salvataggio rimane disabilitato finché la divisa non è trovata o scelta manualmente. Non servono nuove chiavi API o credenziali private nella funzione.
+
+Colori di maglia, dettagli, pantaloncini e calzettoni sono modificabili; motivi disponibili: tinta unita, strisce verticali/orizzontali, fascia sul petto o diagonale. Stagione e variante si salvano con la conferma. Il catalogo è pubblico in lettura e protetto dalle modifiche anonime; le divise dei giocatori seguono il modello pubblico delle conferme. Per provare le ricerche online in locale serve il runtime Vercel (il solo server Vite non serve la cartella API).
 
 ## Funzionamento
 

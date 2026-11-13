@@ -14,7 +14,7 @@ try{
  const original=roster.rows[0],second=roster.rows[1],testTeam=`SCB test ${randomUUID()}`;
  await client.query('set local role anon');
  assert.equal((await client.query('select id,name,ranking,status,team,version from public.candidates')).rowCount,12);
- assert.equal((await client.query('select * from public.kit_catalog')).rowCount,2);
+ assert.equal((await client.query('select * from public.kit_catalog')).rowCount,KIT_CATALOG.length);
  await rejectedCatalogWrite();
  async function rejectedCatalogWrite(){await client.query('savepoint catalog_write');await assert.rejects(client.query("update public.kit_catalog set shirt='#000000'"),e=>e.code==='42501');await client.query('rollback to savepoint catalog_write');}
  async function rejected(sql,params,code){
@@ -36,10 +36,13 @@ try{
  const kit=fromCatalog(KIT_CATALOG[0]);
  await client.query('select public.save_registration($1,$2,$3,$4,$5)',['p1',original.version+2,testTeam,'confirmed',kit]);
  assert.deepEqual((await client.query("select kit from public.candidates where id='p1'")).rows[0].kit,kit);
+ const sourced={...kit,catalog_id:null,source:{url:'https://it.wikipedia.org/wiki/Esempio',title:'Fonte di prova',historical:true}};
+ await client.query('select public.save_registration($1,$2,$3,$4,$5)',['p1',original.version+3,testTeam,'confirmed',sourced]);
+ assert.deepEqual((await client.query("select kit from public.candidates where id='p1'")).rows[0].kit.source,sourced.source);
  await rejected('select public.save_registration($1,$2,$3,$4,$5)',['p2',second.version,'Other team','confirmed',{...kit,shirt:'red<script>'}],'P0001');
  await rejected('select public.save_registration($1,$2,$3,$4,$5)',['p2',second.version,'Other team','confirmed',{...kit,season:'1987-1989'}],'P0001');
  await client.query('reset role');
- assert.equal((await client.query('select count(*)::int as n from public.registration_events where candidate_id=$1 and after_value->>\'team\'=$2',['p1',testTeam])).rows[0].n,2);
+ assert.equal((await client.query('select count(*)::int as n from public.registration_events where candidate_id=$1 and after_value->>\'team\'=$2',['p1',testTeam])).rows[0].n,3);
  await client.query('rollback');
  console.log(JSON.stringify({verified:true,candidates:12,publicRead:true,publicConfirm:true,publicRevoke:true,rankingProtected:true,privateColumnsProtected:true,auditProtected:true,membersProtected:true,staleRejected:true,duplicateRejected:true,emptyTeamRejected:true,catalogReadOnly:true,kitSaved:true,invalidKitRejected:true,testChangesRolledBack:true}));
 }catch(error){await client.query('rollback').catch(()=>{});console.error(JSON.stringify({verified:false,code:error.code||error.name,message:error instanceof assert.AssertionError?'Assertion failed':error.message}));process.exitCode=1;}

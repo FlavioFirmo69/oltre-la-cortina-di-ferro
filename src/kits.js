@@ -1,9 +1,14 @@
 export const KIT_CATALOG = [
+  {id:'hansa-rostock-1989-home',team_name:'Hansa Rostock',aliases:['FC Hansa Rostock','F.C. Hansa Rostock'],season:'1989-1990',variant:'casa',shirt:'#f3f0e4',accent:'#1666ac',shorts:'#1666ac',socks:'#f3f0e4',pattern:'band',source_url:'https://www.footballkitarchive.com/hansa-rostock-1989-90-home-kit-117874/',source_note:'Maglia bianca con fascia orizzontale blu della stagione 1989/90, documentata in archivio. Completo e dettagli sono stilizzati e modificabili.'},
+  {id:'ferencvaros-1986-home',team_name:'Ferencváros',aliases:['Ferencvaros','Ferencvarosi TC','Ferencvárosi TC','FTC Budapest'],season:'1986-1987',variant:'casa',shirt:'#16834b',accent:'#f5f0dd',shorts:'#f5f0dd',socks:'#16834b',pattern:'hoops',source_url:'https://www.footballkitarchive.com/it/ferencvaros-1986-87-home-kit/119131/',source_note:'Maglia verde e bianca a fasce orizzontali, stagione 1986/87. Ricostruzione stilizzata; dettagli e completo modificabili.'},
+  {id:'dynamo-kyiv-1985-home',team_name:'Dinamo Kiev',aliases:['Dynamo Kyiv','Dynamo Kiev','Dinamo Kyiv','Dinamo Kijev','FC Dynamo Kyiv'],season:'1985-1986',variant:'casa',shirt:'#f3f0e4',accent:'#1666ac',shorts:'#f3f0e4',socks:'#1666ac',pattern:'band',source_url:'https://www.footballkitarchive.com/dynamo-kyiv-1985-86-home-kit-52353/',source_note:'Colori bianco e blu della divisa 1985/86. Il motivo è semplificato per l’omino; non è una riproduzione esatta dei dettagli della maglia.'},
   {id:'spartak-moscow-1987-home',team_name:'Spartak Mosca',aliases:['Spartak Moscow','Spartak Moskva','FC Spartak Moscow'],season:'1987-1988',variant:'casa',shirt:'#bd302e',accent:'#f4ecd8',shorts:'#f4ecd8',socks:'#bd302e',pattern:'band',source_url:'https://www.footballkitarchive.com/spartak-moscow-1987-88-home-kit-66005/',source_note:'Maglia rossa con fascia bianca documentata in archivio. Pantaloncini, calzettoni e dettagli sono una ricostruzione stilizzata modificabile.'},
   {id:'dynamo-dresden-1988-home',team_name:'Dynamo Dresda',aliases:['Dynamo Dresden','SG Dynamo Dresden','Dinamo Dresda','Dinamo Dresden'],season:'1988-1989',variant:'casa',shirt:'#e6bd39',accent:'#252c29',shorts:'#252c29',socks:'#e6bd39',pattern:'plain',source_url:'https://www.footballkitarchive.com/sg-dynamo-dresden-1988-89-home-kit-92182/',source_note:'Maglia giallo oro con colletto e bordi neri documentata in archivio. Pantaloncini, calzettoni e dettagli sono una ricostruzione stilizzata modificabile.'}
 ];
 export const PATTERNS = {plain:'Tinta unita',vertical:'Strisce verticali',hoops:'Strisce orizzontali',band:'Fascia sul petto',sash:'Fascia diagonale'};
 export const DEFAULT_KIT = {catalog_id:null,season:'1985-1986',variant:'casa',shirt:'#e7dfca',accent:'#434d43',shorts:'#434d43',socks:'#e7dfca',pattern:'plain'};
+export function isPlaceholderKit(input){return !input||!input.catalog_id&&!input.source&&['shirt','accent','shorts','socks','pattern'].every(k=>input[k]===DEFAULT_KIT[k]);}
+export function resolveKit(candidate,catalog=KIT_CATALOG){const found=findTeamKits(candidate.team,catalog)[0];return isPlaceholderKit(candidate.kit)?found?fromCatalog(found):null:cleanKit(candidate.kit);}
 export function normalizeTeam(value){return String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim().replace(/^(fc|fk|sg)\s+/,'');}
 export function findTeamKits(value,catalog=KIT_CATALOG){const query=normalizeTeam(value);return query?catalog.filter(k=>[k.team_name,...k.aliases].some(n=>normalizeTeam(n)===query)):[];}
 export function fromCatalog(record){return cleanKit({...record,catalog_id:record.id});}
@@ -14,6 +19,7 @@ export function cleanKit(input={}){
  if(/^198\d-(198\d|1990)$/.test(input?.season||'')&&Number(input.season.slice(5))===Number(input.season.slice(0,4))+1)result.season=input.season;
  if(['casa','trasferta','coppa'].includes(input?.variant))result.variant=input.variant;
  if(typeof input?.catalog_id==='string'&&/^[a-z0-9-]{1,80}$/.test(input.catalog_id))result.catalog_id=input.catalog_id;
+ if(input?.source&&/^https:\/\/(en|it)\.wikipedia\.org\/wiki\//.test(input.source.url||'')&&typeof input.source.title==='string'&&typeof input.source.historical==='boolean')result.source={url:input.source.url.slice(0,600),title:input.source.title.slice(0,180),historical:input.source.historical};
  return result;
 }
 export function kitFigure(input,identifier='preview'){
