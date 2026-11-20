@@ -1,0 +1,20 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    {
+      "path": "/api/editorial-cron",
+      "schedule": "17 7 * * *"
+    }
+  ],
+  "functions": {
+    "api/editorial-cron.js": {
+      "maxDuration": 30
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/storia-dei-campionati",
+      "destination": "/index.html"
+    }
+  ]
+}

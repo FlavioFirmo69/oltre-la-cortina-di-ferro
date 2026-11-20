@@ -3,6 +3,7 @@ import {initialCandidates,allocation,validateTeam} from './registration.js';
 import {KIT_CATALOG,DEFAULT_KIT,findTeamKits,fromCatalog,kitFigure,resolveKit} from './kits.js';
 import {mountKitEditor} from './kit-editor.js';
 import './style.css';
+import {renderHistory} from './history-page.js';
 const url=import.meta.env.VITE_SUPABASE_URL,key=import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 const db=url&&key?createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}}):null,root=document.querySelector('#app');
 let demo=!db,candidates=[],catalog=KIT_CATALOG,filter='all',busy=false;
@@ -11,7 +12,7 @@ const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'
 const statusText={pending:'Da confermare',confirmed:'Confermato',declined:'Non partecipa'};
 function notice(message){const el=document.querySelector('#notice');el.textContent=message;el.hidden=!message;}
 function shell(content){
-  root.innerHTML=`<header><a class="brand" href="/" aria-label="Subbuteo Club Brescia, home"><span class="crest" aria-hidden="true">SCB</span><span>SUBBUTEO CLUB <b>BRESCIA</b><small>PASSIONE SENZA CONFINI</small></span></a><div class="header-right"><span class="status">${demo?'MODALITÀ DEMO':'TORNEO DEL CLUB'}</span></div></header><main>${content}<p id="notice" class="notice" role="status" hidden></p></main><footer><strong>SUBBUTEO CLUB BRESCIA</strong><span>OLTRE LA CORTINA DI FERRO · IL CALCIO DELL’EST, SUL PANNO VERDE.</span></footer>`;
+  root.innerHTML=`<header><a class="brand" href="/" aria-label="Subbuteo Club Brescia, home"><span class="crest" aria-hidden="true">SCB</span><span>SUBBUTEO CLUB <b>BRESCIA</b><small>PASSIONE SENZA CONFINI</small></span></a><div class="header-right"><nav class="site-nav" aria-label="Navigazione principale"><a href="/">Il torneo</a><a href="/storia-dei-campionati">Storia dei campionati</a></nav><span class="status">${demo?'MODALITÀ DEMO':'TORNEO DEL CLUB'}</span></div></header><main>${content}<p id="notice" class="notice" role="status" hidden></p></main><footer><strong>SUBBUTEO CLUB BRESCIA</strong><span>OLTRE LA CORTINA DI FERRO · IL CALCIO DELL’EST, SUL PANNO VERDE.</span></footer>`;
 }
 function loadDemo(){
   try{const saved=JSON.parse(localStorage.getItem(storageKey));candidates=Array.isArray(saved)&&saved.length===12?saved:initialCandidates();}catch{candidates=initialCandidates();}
@@ -80,6 +81,7 @@ function editCandidate(id){
   };
 }
 async function init(){
+  if(location.pathname==='/storia-dei-campionati'){await renderHistory({db,shell,esc});return;}
   if(!db){loadDemo();render();return;}
   try{await loadRemote();render();}
   catch(err){shell('<section class="login"><p class="eyebrow">SUBBUTEO CLUB BRESCIA</p><h2>Il torneo non è raggiungibile.</h2><p class="muted">I dati non sono stati caricati. Riprova tra poco.</p><button id="retry" class="primary">Riprova</button></section>');notice(err.message);document.querySelector('#retry').onclick=()=>init();}

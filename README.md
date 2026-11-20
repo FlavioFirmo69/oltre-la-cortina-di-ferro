@@ -73,3 +73,13 @@ Rieseguire il deploy dopo modifiche delle variabili. Le migrazioni si applicano 
 I test locali coprono ranking, formati, squadre, calendario e classifica. La verifica del DB pubblico controlla letture e conferme anonime, revoca, audit, blocco scritture dirette e colonne private, duplicati e conflitti di versione; tutte le modifiche di prova sono annullate con rollback.
 
 Calendario, risultati, classifica e cambio stagione non sono ancora esposti. `src/league.js` contiene funzioni testate per il passo successivo. Formula concordata: andata e ritorno, 3 punti vittoria, 1 pareggio, 2 retrocessioni e 2 promozioni. Restano da concordare i criteri di parità.
+
+## Archivio storico e scrittura manuale
+
+`/storia-dei-campionati` legge gli articoli pubblicati da `historical_articles`. Il pulsante **Scrivi un articolo** apre titolo, paese, stagione, sommario, testo e sezioni facoltative per commento, regole, classifica e fonti. L'anteprima precede la pubblicazione; la bozza resta nel localStorage del browser. Il sito mantiene la modalità pubblica senza login concordata: chi ha il link può pubblicare. Il testo viene reso come testo semplice con escaping HTML, i link devono usare HTTPS. Il DB consente l'inserimento solo attraverso la funzione validata `publish_historical_article`, senza scritture dirette sulle tabelle.
+
+Il primo articolo, Germania Est 1987/88, è stato preparato e verificato sulle classifiche RSSSF. Nessun modello AI è collegato, nessun credito è stato attivato e nessun articolo viene generato in autonomia. Le funzioni del precedente prototipo automatico sono revocate dalla migrazione manuale.
+
+`vercel.json` programma esclusivamente una lettura giornaliera alle 07:17 UTC (`/api/editorial-cron`). Configurare `CRON_SECRET` come Secret di produzione, senza prefisso VITE_. Il controllo usa il solo accesso pubblico in lettura, non pubblica contenuti e non usa AI. L'attività giornaliera aiuta contro l'inattività Supabase Free ma non garantisce che il progetto non venga sospeso. Vercel Hobby può eseguire il controllo nell'ora pianificata anziché al minuto esatto.
+
+Verifiche: `npm test`, `npm run build`, `node --env-file=.env.database.local scripts/verify-editorial.js`. Quest'ultimo verifica la pubblicazione con rollback, la disabilitazione della generazione e i permessi anonimi. Per ricreare il primo articolo usare `scripts/seed-history.js` solo in un ambiente iniziale. Le migrazioni 20261120000100–00300 sono state applicate al database del club.
