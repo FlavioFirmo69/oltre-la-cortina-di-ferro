@@ -6,7 +6,7 @@ export const TOPICS = [88,87,86,85,84,83,82,81,89,90].flatMap(year=>[
 ]);
 export function sourceText(html){
   return html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,'').replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi,'')
-    .replace(/<[^>]+>/g,' ').replace(/&nbsp;/gi,' ').replace(/&amp;/gi,'&').replace(/&quot;/gi,'"').replace(/&#(\d+);/g,(_,n)=>String.fromCodePoint(Number(n))).replace(/\r/g,'');
+    .replace(/<[^>]+>/g,' ').replace(/&(auml|Auml|ouml|Ouml|uuml|Uuml|szlig);/g,(_,n)=>({auml:'ä',Auml:'Ä',ouml:'ö',Ouml:'Ö',uuml:'ü',Uuml:'Ü',szlig:'ß'}[n])).replace(/&nbsp;/gi,' ').replace(/&amp;/gi,'&').replace(/&quot;/gi,'"').replace(/&#(\d+);/g,(_,n)=>String.fromCodePoint(Number(n))).replace(/\r/g,'');
 }
 export async function fetchSource(topic){
   const res=await fetch(topic.url,{redirect:'error',signal:AbortSignal.timeout(15000),headers:{'User-Agent':'SCB-HistoricalArchive/1.0 (+https://oltre-la-cortina-di-ferro.vercel.app/)'}});
@@ -34,6 +34,7 @@ export function extractTable(text,topic){
       if(m)row={position:+m[1],team:m[2].trim(),played:+m[3],won:+m[4],drawn:+m[5],lost:+m[6],gf:+m[7],ga:+m[8],points:+m[9]};
     }
     if(!row)continue;
+    if(/&[a-z]+;/i.test(row.team))throw new Error('Nome squadra con caratteri da verificare');
     if(row.position!==rows.length+1)throw new Error('Classifica incompleta o duplicata');
     row.adjustment=row.points-(2*row.won+row.drawn);rows.push(row);
     if(rows.length===topic.teams)break;
